@@ -1,0 +1,1650 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ChainPass — Blockchain Digital Passport</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&display=swap');
+
+  :root {
+    --bg: #050A14;
+    --surface: #0C1526;
+    --surface2: #122036;
+    --border: #1E3352;
+    --accent: #00D4FF;
+    --accent2: #7B5FFF;
+    --accent3: #00FF88;
+    --danger: #FF4560;
+    --warn: #FFB830;
+    --text: #E8F4FF;
+    --muted: #5A7A9A;
+    --mono: 'Space Mono', monospace;
+    --sans: 'Syne', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Grid background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,212,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,212,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .app { position: relative; z-index: 1; }
+
+  /* ── Header ── */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.2rem 2rem;
+    border-bottom: 1px solid var(--border);
+    background: rgba(5,10,20,0.8);
+    backdrop-filter: blur(12px);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 800;
+    font-size: 1.3rem;
+    letter-spacing: -0.02em;
+    color: var(--text);
+  }
+
+  .logo-icon {
+    width: 36px;
+    height: 36px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+  }
+
+  .logo span { color: var(--accent); }
+
+  .header-stats {
+    display: flex;
+    gap: 2rem;
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    color: var(--muted);
+  }
+
+  .header-stat strong { color: var(--accent3); }
+
+  /* ── Layout ── */
+  .layout {
+    display: grid;
+    grid-template-columns: 280px 1fr 320px;
+    gap: 0;
+    min-height: calc(100vh - 65px);
+  }
+
+  .sidebar {
+    border-right: 1px solid var(--border);
+    padding: 1.5rem 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .main { padding: 1.5rem 2rem; overflow-y: auto; }
+
+  .chain-panel {
+    border-left: 1px solid var(--border);
+    padding: 1.5rem;
+    overflow-y: auto;
+  }
+
+  /* ── Nav ── */
+  .nav-section {
+    font-size: 0.65rem;
+    font-family: var(--mono);
+    color: var(--muted);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 0.8rem 0.5rem 0.3rem;
+  }
+
+  .nav-btn {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0.7rem 0.8rem;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--muted);
+    transition: all 0.15s;
+    border: none;
+    background: none;
+    width: 100%;
+    text-align: left;
+  }
+
+  .nav-btn:hover { background: var(--surface2); color: var(--text); }
+  .nav-btn.active { background: rgba(0,212,255,0.1); color: var(--accent); border: 1px solid rgba(0,212,255,0.2); }
+
+  .nav-icon { width: 20px; text-align: center; font-size: 14px; }
+
+  /* ── Panels ── */
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  /* ── Section title ── */
+  .section-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 1.5rem;
+  }
+
+  .section-title {
+    font-size: 1.5rem;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+  }
+
+  .section-subtitle {
+    font-size: 0.8rem;
+    color: var(--muted);
+    font-family: var(--mono);
+    margin-top: 2px;
+  }
+
+  /* ── Forms ── */
+  .form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .form-group { display: flex; flex-direction: column; gap: 6px; }
+  .form-group.full { grid-column: 1 / -1; }
+
+  label {
+    font-size: 0.7rem;
+    font-family: var(--mono);
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  input, select, textarea {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.65rem 0.9rem;
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 0.9rem;
+    transition: border-color 0.15s;
+    outline: none;
+  }
+
+  input:focus, select:focus, textarea:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(0,212,255,0.1);
+  }
+
+  select option { background: var(--surface2); }
+  textarea { resize: vertical; min-height: 80px; }
+
+  /* ── Buttons ── */
+  .btn {
+    padding: 0.7rem 1.4rem;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    font-family: var(--sans);
+    font-weight: 700;
+    font-size: 0.85rem;
+    transition: all 0.15s;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+  }
+
+  .btn-primary {
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    color: #fff;
+  }
+  .btn-primary:hover { opacity: 0.88; transform: translateY(-1px); }
+
+  .btn-danger { background: var(--danger); color: #fff; }
+  .btn-danger:hover { opacity: 0.88; }
+
+  .btn-outline {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text);
+  }
+  .btn-outline:hover { border-color: var(--accent); color: var(--accent); }
+
+  .btn-sm { padding: 0.45rem 0.9rem; font-size: 0.78rem; }
+
+  /* ── Passport card ── */
+  .passport-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    gap: 1.2rem;
+    margin-top: 1rem;
+  }
+
+  .passport-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+    transition: border-color 0.15s, transform 0.15s;
+    cursor: pointer;
+  }
+
+  .passport-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+  }
+
+  .card-header {
+    background: linear-gradient(135deg, rgba(0,212,255,0.12), rgba(123,95,255,0.12));
+    border-bottom: 1px solid var(--border);
+    padding: 1rem 1.2rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .card-flag { font-size: 28px; }
+
+  .card-type {
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    color: var(--accent);
+    background: rgba(0,212,255,0.1);
+    border: 1px solid rgba(0,212,255,0.2);
+    padding: 3px 8px;
+    border-radius: 4px;
+    letter-spacing: 0.08em;
+  }
+
+  .card-body { padding: 1rem 1.2rem; }
+
+  .card-name {
+    font-size: 1.15rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    margin-bottom: 4px;
+  }
+
+  .card-meta {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    color: var(--muted);
+    margin-bottom: 0.8rem;
+    line-height: 1.6;
+  }
+
+  .card-hash {
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    color: var(--accent3);
+    background: rgba(0,255,136,0.06);
+    border: 1px solid rgba(0,255,136,0.15);
+    padding: 5px 8px;
+    border-radius: 6px;
+    word-break: break-all;
+    margin-bottom: 0.8rem;
+  }
+
+  .card-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .status-badge {
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+  }
+
+  .status-active { background: rgba(0,255,136,0.12); color: var(--accent3); border: 1px solid rgba(0,255,136,0.25); }
+  .status-revoked { background: rgba(255,69,96,0.12); color: var(--danger); border: 1px solid rgba(255,69,96,0.25); }
+  .status-expired { background: rgba(255,184,48,0.12); color: var(--warn); border: 1px solid rgba(255,184,48,0.25); }
+
+  /* ── Blockchain viewer ── */
+  .chain-title {
+    font-size: 0.7rem;
+    font-family: var(--mono);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .chain-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  .block {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 0.9rem;
+    margin-bottom: 0.5rem;
+    position: relative;
+    transition: border-color 0.15s;
+  }
+
+  .block:hover { border-color: var(--accent2); }
+
+  .block::after {
+    content: '↓';
+    position: absolute;
+    bottom: -17px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: var(--muted);
+    font-size: 12px;
+    z-index: 1;
+  }
+
+  .block:last-child::after { display: none; }
+
+  .block-index {
+    font-family: var(--mono);
+    font-size: 0.6rem;
+    color: var(--accent);
+    margin-bottom: 4px;
+    letter-spacing: 0.06em;
+  }
+
+  .block-data {
+    font-size: 0.78rem;
+    font-weight: 600;
+    margin-bottom: 6px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .block-hash {
+    font-family: var(--mono);
+    font-size: 0.58rem;
+    color: var(--muted);
+    word-break: break-all;
+    line-height: 1.4;
+  }
+
+  .block-hash span { color: var(--accent3); }
+
+  .genesis-block {
+    border-color: rgba(0,212,255,0.4);
+    background: rgba(0,212,255,0.05);
+  }
+
+  /* ── Modal ── */
+  .modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(5,10,20,0.85);
+    backdrop-filter: blur(6px);
+    z-index: 200;
+    display: none;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .modal-backdrop.open { display: flex; }
+
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    width: 560px;
+    max-width: 95vw;
+    max-height: 85vh;
+    overflow-y: auto;
+    padding: 2rem;
+    animation: modalIn 0.2s ease;
+  }
+
+  @keyframes modalIn {
+    from { opacity: 0; transform: scale(0.95) translateY(10px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+  }
+
+  .modal-title {
+    font-size: 1.2rem;
+    font-weight: 800;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .detail-row {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 0.6rem;
+    font-size: 0.85rem;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid rgba(30,51,82,0.5);
+  }
+
+  .detail-label {
+    font-family: var(--mono);
+    font-size: 0.68rem;
+    color: var(--muted);
+    width: 130px;
+    flex-shrink: 0;
+    padding-top: 2px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .detail-value { word-break: break-all; line-height: 1.5; }
+
+  /* ── Alert ── */
+  .alert {
+    padding: 0.8rem 1rem;
+    border-radius: 8px;
+    font-size: 0.83rem;
+    margin-bottom: 1rem;
+    display: none;
+    align-items: center;
+    gap: 8px;
+    animation: slideIn 0.2s ease;
+  }
+
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateY(-4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .alert.show { display: flex; }
+  .alert-success { background: rgba(0,255,136,0.08); border: 1px solid rgba(0,255,136,0.2); color: var(--accent3); }
+  .alert-error { background: rgba(255,69,96,0.08); border: 1px solid rgba(255,69,96,0.2); color: var(--danger); }
+  .alert-info { background: rgba(0,212,255,0.08); border: 1px solid rgba(0,212,255,0.2); color: var(--accent); }
+
+  /* ── Stats ── */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1rem 1.2rem;
+    transition: border-color 0.15s;
+  }
+
+  .stat-card:hover { border-color: var(--accent); }
+
+  .stat-label {
+    font-family: var(--mono);
+    font-size: 0.63rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 6px;
+  }
+
+  .stat-value {
+    font-size: 1.8rem;
+    font-weight: 800;
+    letter-spacing: -0.04em;
+    line-height: 1;
+  }
+
+  .stat-value.accent { color: var(--accent); }
+  .stat-value.green { color: var(--accent3); }
+  .stat-value.purple { color: var(--accent2); }
+  .stat-value.red { color: var(--danger); }
+
+  /* ── Verify panel ── */
+  .verify-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .verify-result {
+    display: none;
+    padding: 1.2rem;
+    border-radius: 10px;
+    margin-top: 1rem;
+    font-family: var(--mono);
+    font-size: 0.78rem;
+    line-height: 1.7;
+  }
+
+  .verify-result.valid {
+    display: block;
+    background: rgba(0,255,136,0.06);
+    border: 1px solid rgba(0,255,136,0.2);
+    color: var(--accent3);
+  }
+
+  .verify-result.invalid {
+    display: block;
+    background: rgba(255,69,96,0.06);
+    border: 1px solid rgba(255,69,96,0.2);
+    color: var(--danger);
+  }
+
+  /* ── Chain integrity ── */
+  .integrity-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0.7rem 1rem;
+    background: rgba(0,255,136,0.06);
+    border: 1px solid rgba(0,255,136,0.15);
+    border-radius: 8px;
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    color: var(--accent3);
+    margin-bottom: 1rem;
+  }
+
+  .pulse {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--accent3);
+    animation: pulse 2s ease infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(0.8); }
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 3rem 2rem;
+    color: var(--muted);
+  }
+
+  .empty-icon { font-size: 48px; margin-bottom: 1rem; opacity: 0.5; }
+  .empty-text { font-size: 0.9rem; }
+
+  /* ── Log ── */
+  .log-entry {
+    display: flex;
+    gap: 12px;
+    padding: 0.6rem 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.8rem;
+    align-items: flex-start;
+  }
+
+  .log-time {
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    color: var(--muted);
+    width: 80px;
+    flex-shrink: 0;
+    padding-top: 1px;
+  }
+
+  .log-icon { width: 20px; text-align: center; }
+  .log-msg { flex: 1; line-height: 1.5; }
+  .log-type { font-family: var(--mono); font-size: 0.65rem; padding: 2px 6px; border-radius: 4px; }
+  .log-type.issue { background: rgba(0,212,255,0.1); color: var(--accent); }
+  .log-type.revoke { background: rgba(255,69,96,0.1); color: var(--danger); }
+  .log-type.verify { background: rgba(123,95,255,0.1); color: var(--accent2); }
+  .log-type.transfer { background: rgba(0,255,136,0.1); color: var(--accent3); }
+
+  .mrz-field {
+    background: #000;
+    border: 1px solid rgba(0,212,255,0.2);
+    border-radius: 6px;
+    padding: 0.8rem;
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    color: var(--accent);
+    letter-spacing: 0.08em;
+    line-height: 1.8;
+    word-break: break-all;
+  }
+
+  .tabs {
+    display: flex;
+    gap: 0;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 1.5rem;
+  }
+
+  .tab {
+    padding: 0.6rem 1.2rem;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--muted);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    transition: all 0.15s;
+  }
+
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- Header -->
+<header>
+  <div class="logo">
+    <div class="logo-icon">🛂</div>
+    Chain<span>Pass</span>
+  </div>
+  <div class="header-stats">
+    <div>BLOCKS: <strong id="hdr-blocks">1</strong></div>
+    <div>PASSPORTS: <strong id="hdr-passports">0</strong></div>
+    <div>CHAIN VALID: <strong id="hdr-valid">✓ YES</strong></div>
+    <div>NETWORK: <strong>MAINNET</strong></div>
+  </div>
+</header>
+
+<div class="layout">
+
+<!-- Sidebar -->
+<nav class="sidebar">
+  <div class="nav-section">AUTHORITY</div>
+  <button class="nav-btn active" onclick="showPanel('dashboard')">
+    <span class="nav-icon">📊</span> Dashboard
+  </button>
+  <button class="nav-btn" onclick="showPanel('issue')">
+    <span class="nav-icon">✦</span> Issue Passport
+  </button>
+  <button class="nav-btn" onclick="showPanel('passports')">
+    <span class="nav-icon">🗃</span> All Passports
+  </button>
+  <div class="nav-section">OPERATIONS</div>
+  <button class="nav-btn" onclick="showPanel('verify')">
+    <span class="nav-icon">🔍</span> Verify Passport
+  </button>
+  <button class="nav-btn" onclick="showPanel('revoke')">
+    <span class="nav-icon">🚫</span> Revoke Passport
+  </button>
+  <button class="nav-btn" onclick="showPanel('transfer')">
+    <span class="nav-icon">🔁</span> Transfer Record
+  </button>
+  <div class="nav-section">SYSTEM</div>
+  <button class="nav-btn" onclick="showPanel('chain')">
+    <span class="nav-icon">⛓</span> Blockchain Explorer
+  </button>
+  <button class="nav-btn" onclick="showPanel('audit')">
+    <span class="nav-icon">📋</span> Audit Log
+  </button>
+</nav>
+
+<!-- Main content -->
+<main class="main">
+
+  <!-- Dashboard -->
+  <div class="panel active" id="panel-dashboard">
+    <div class="section-header">
+      <div>
+        <div class="section-title">Dashboard</div>
+        <div class="section-subtitle">BLOCKCHAIN PASSPORT AUTHORITY</div>
+      </div>
+    </div>
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-label">Total Issued</div>
+        <div class="stat-value accent" id="stat-total">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Active</div>
+        <div class="stat-value green" id="stat-active">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Revoked</div>
+        <div class="stat-value red" id="stat-revoked">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Chain Blocks</div>
+        <div class="stat-value purple" id="stat-blocks">1</div>
+      </div>
+    </div>
+
+    <div class="integrity-bar">
+      <div class="pulse"></div>
+      CHAIN INTEGRITY: VERIFIED — All blocks valid and linked
+    </div>
+
+    <div class="section-header">
+      <div class="section-title" style="font-size:1rem">Recent Activity</div>
+    </div>
+    <div id="recent-log"></div>
+  </div>
+
+  <!-- Issue Passport -->
+  <div class="panel" id="panel-issue">
+    <div class="section-header">
+      <div>
+        <div class="section-title">Issue Passport</div>
+        <div class="section-subtitle">MINT NEW BLOCKCHAIN CREDENTIAL</div>
+      </div>
+    </div>
+
+    <div id="issue-alert" class="alert"></div>
+
+    <div class="form-grid">
+      <div class="form-group">
+        <label>First Name</label>
+        <input type="text" id="fname" placeholder="e.g. Arjun" />
+      </div>
+      <div class="form-group">
+        <label>Last Name</label>
+        <input type="text" id="lname" placeholder="e.g. Sharma" />
+      </div>
+      <div class="form-group">
+        <label>Date of Birth</label>
+        <input type="date" id="dob" />
+      </div>
+      <div class="form-group">
+        <label>Gender</label>
+        <select id="gender">
+          <option value="M">Male</option>
+          <option value="F">Female</option>
+          <option value="X">Non-binary / Other</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Nationality</label>
+        <select id="nationality">
+          <option value="IND">🇮🇳 India</option>
+          <option value="USA">🇺🇸 United States</option>
+          <option value="GBR">🇬🇧 United Kingdom</option>
+          <option value="DEU">🇩🇪 Germany</option>
+          <option value="JPN">🇯🇵 Japan</option>
+          <option value="AUS">🇦🇺 Australia</option>
+          <option value="CAN">🇨🇦 Canada</option>
+          <option value="FRA">🇫🇷 France</option>
+          <option value="BRA">🇧🇷 Brazil</option>
+          <option value="ZAF">🇿🇦 South Africa</option>
+          <option value="SGP">🇸🇬 Singapore</option>
+          <option value="UAE">🇦🇪 UAE</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Place of Birth</label>
+        <input type="text" id="pob" placeholder="e.g. Mumbai" />
+      </div>
+      <div class="form-group">
+        <label>Issue Date</label>
+        <input type="date" id="issue-date" />
+      </div>
+      <div class="form-group">
+        <label>Expiry Date</label>
+        <input type="date" id="expiry-date" />
+      </div>
+      <div class="form-group">
+        <label>Issuing Authority</label>
+        <input type="text" id="authority" value="Ministry of External Affairs" />
+      </div>
+      <div class="form-group">
+        <label>Passport Type</label>
+        <select id="ptype">
+          <option value="P">P — Regular</option>
+          <option value="D">D — Diplomatic</option>
+          <option value="S">S — Service</option>
+          <option value="O">O — Official</option>
+        </select>
+      </div>
+      <div class="form-group full">
+        <label>Additional Notes</label>
+        <textarea id="notes" placeholder="Optional: special endorsements, visa notes..."></textarea>
+      </div>
+    </div>
+
+    <div style="display:flex; gap:12px;">
+      <button class="btn btn-primary" onclick="issuePassport()">⛓ Issue & Commit to Chain</button>
+      <button class="btn btn-outline" onclick="prefillDemo()">📝 Fill Demo Data</button>
+    </div>
+  </div>
+
+  <!-- All Passports -->
+  <div class="panel" id="panel-passports">
+    <div class="section-header">
+      <div>
+        <div class="section-title">All Passports</div>
+        <div class="section-subtitle">REGISTERED ON CHAIN</div>
+      </div>
+      <input type="text" id="search-input" placeholder="Search name, ID, country..." style="width:200px" oninput="renderPassports()" />
+    </div>
+    <div id="passport-grid" class="passport-grid">
+      <div class="empty-state">
+        <div class="empty-icon">🛂</div>
+        <div class="empty-text">No passports issued yet.<br>Go to <strong>Issue Passport</strong> to create one.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Verify -->
+  <div class="panel" id="panel-verify">
+    <div class="section-header">
+      <div>
+        <div class="section-title">Verify Passport</div>
+        <div class="section-subtitle">CRYPTOGRAPHIC CHAIN VALIDATION</div>
+      </div>
+    </div>
+    <div class="verify-box">
+      <div class="form-group" style="margin-bottom:1rem">
+        <label>Passport ID or Block Hash</label>
+        <input type="text" id="verify-input" placeholder="e.g. PP-000001 or 0xa3f9..." />
+      </div>
+      <button class="btn btn-primary" onclick="verifyPassport()">🔍 Verify on Chain</button>
+      <div id="verify-result" class="verify-result"></div>
+    </div>
+  </div>
+
+  <!-- Revoke -->
+  <div class="panel" id="panel-revoke">
+    <div class="section-header">
+      <div>
+        <div class="section-title">Revoke Passport</div>
+        <div class="section-subtitle">IMMUTABLE REVOCATION RECORD</div>
+      </div>
+    </div>
+    <div id="revoke-alert" class="alert"></div>
+    <div class="verify-box">
+      <div class="form-group" style="margin-bottom:1rem">
+        <label>Passport ID to Revoke</label>
+        <input type="text" id="revoke-input" placeholder="e.g. PP-000001" />
+      </div>
+      <div class="form-group" style="margin-bottom:1rem">
+        <label>Reason for Revocation</label>
+        <select id="revoke-reason">
+          <option value="Lost">Lost / Stolen</option>
+          <option value="Expired">Document Expired</option>
+          <option value="Fraud">Suspected Fraud</option>
+          <option value="Deceased">Holder Deceased</option>
+          <option value="NewIssued">Replaced by New Issue</option>
+          <option value="CourtOrder">Court Order</option>
+        </select>
+      </div>
+      <button class="btn btn-danger" onclick="revokePassport()">🚫 Revoke & Record on Chain</button>
+    </div>
+  </div>
+
+  <!-- Transfer -->
+  <div class="panel" id="panel-transfer">
+    <div class="section-header">
+      <div>
+        <div class="section-title">Transfer Record</div>
+        <div class="section-subtitle">INTER-AGENCY RECORD TRANSFER</div>
+      </div>
+    </div>
+    <div id="transfer-alert" class="alert"></div>
+    <div class="verify-box">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Passport ID</label>
+          <input type="text" id="transfer-id" placeholder="e.g. PP-000001" />
+        </div>
+        <div class="form-group">
+          <label>Destination Authority</label>
+          <select id="transfer-dest">
+            <option>Immigration Bureau</option>
+            <option>Foreign Ministry</option>
+            <option>Border Control Agency</option>
+            <option>Consulate — New York</option>
+            <option>Consulate — London</option>
+            <option>Consulate — Dubai</option>
+            <option>Airport Authority</option>
+          </select>
+        </div>
+        <div class="form-group full">
+          <label>Transfer Memo</label>
+          <input type="text" id="transfer-memo" placeholder="Reason or reference number" />
+        </div>
+      </div>
+      <button class="btn btn-primary" onclick="transferRecord()">🔁 Transfer & Commit</button>
+    </div>
+  </div>
+
+  <!-- Chain Explorer -->
+  <div class="panel" id="panel-chain">
+    <div class="section-header">
+      <div>
+        <div class="section-title">Blockchain Explorer</div>
+        <div class="section-subtitle">FULL CHAIN INSPECTION</div>
+      </div>
+      <button class="btn btn-outline btn-sm" onclick="validateChain()">⚙ Validate Chain</button>
+    </div>
+    <div id="chain-valid-bar" class="integrity-bar">
+      <div class="pulse"></div>
+      <span id="chain-valid-msg">Chain valid</span>
+    </div>
+    <div id="chain-explorer"></div>
+  </div>
+
+  <!-- Audit Log -->
+  <div class="panel" id="panel-audit">
+    <div class="section-header">
+      <div>
+        <div class="section-title">Audit Log</div>
+        <div class="section-subtitle">IMMUTABLE ACTIVITY TRAIL</div>
+      </div>
+      <button class="btn btn-outline btn-sm" onclick="exportAudit()">⬇ Export JSON</button>
+    </div>
+    <div id="audit-log"></div>
+  </div>
+
+</main>
+
+<!-- Right panel: Chain -->
+<aside class="chain-panel">
+  <div class="chain-title">Live Chain</div>
+  <div id="chain-sidebar"></div>
+</aside>
+
+</div><!-- /layout -->
+
+<!-- Passport Detail Modal -->
+<div class="modal-backdrop" id="modal-backdrop" onclick="closeModal(event)">
+  <div class="modal" id="modal-content">
+    <div class="modal-title" id="modal-title">Passport Details</div>
+
+    <div class="tabs">
+      <div class="tab active" onclick="switchTab(this,'tab-info')">Info</div>
+      <div class="tab" onclick="switchTab(this,'tab-mrz')">MRZ</div>
+      <div class="tab" onclick="switchTab(this,'tab-chain')">Chain Data</div>
+    </div>
+
+    <div class="tab-content active" id="tab-info"></div>
+    <div class="tab-content" id="tab-mrz"></div>
+    <div class="tab-content" id="tab-chain"></div>
+
+    <div style="margin-top:1.5rem; display:flex; gap:10px;" id="modal-actions"></div>
+  </div>
+</div>
+
+</div><!-- /app -->
+
+<script>
+// ═══════════════════════════════════════════════════
+// BLOCKCHAIN ENGINE
+// ═══════════════════════════════════════════════════
+
+async function sha256(message) {
+  const msgBuf = new TextEncoder().encode(message);
+  const hash = await crypto.subtle.digest('SHA-256', msgBuf);
+  return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+class Block {
+  constructor(index, data, previousHash, timestamp) {
+    this.index = index;
+    this.timestamp = timestamp || new Date().toISOString();
+    this.data = data;
+    this.previousHash = previousHash || '0000000000000000000000000000000000000000000000000000000000000000';
+    this.nonce = 0;
+    this.hash = '';
+  }
+
+  async computeHash() {
+    const content = this.index + this.timestamp + JSON.stringify(this.data) + this.previousHash + this.nonce;
+    return await sha256(content);
+  }
+
+  async mine(difficulty) {
+    const target = Array(difficulty + 1).join('0');
+    do {
+      this.nonce++;
+      this.hash = await this.computeHash();
+    } while (!this.hash.startsWith(target));
+    return this.hash;
+  }
+}
+
+class Blockchain {
+  constructor() {
+    this.chain = [];
+    this.difficulty = 2;
+    this.pendingTransactions = [];
+    this.passports = {};
+    this.auditLog = [];
+    this.passportCounter = 0;
+    this.initialized = false;
+  }
+
+  async init() {
+    const genesis = new Block(0, {
+      type: 'GENESIS',
+      message: 'ChainPass — Blockchain Digital Passport System',
+      authority: 'Root Certificate Authority',
+      networkId: 'CHAINPASS-MAINNET-v1'
+    }, '0000000000000000000000000000000000000000000000000000000000000000');
+    genesis.hash = await genesis.computeHash();
+    this.chain.push(genesis);
+    this.initialized = true;
+    updateUI();
+  }
+
+  getLatestBlock() {
+    return this.chain[this.chain.length - 1];
+  }
+
+  async addBlock(data) {
+    const prev = this.getLatestBlock();
+    const block = new Block(this.chain.length, data, prev.hash);
+    await block.mine(this.difficulty);
+    this.chain.push(block);
+    return block;
+  }
+
+  async isChainValid() {
+    for (let i = 1; i < this.chain.length; i++) {
+      const cur = this.chain[i];
+      const prev = this.chain[i - 1];
+      const recomputed = await cur.computeHash();
+      if (cur.hash !== recomputed) return { valid: false, block: i, reason: 'Hash mismatch' };
+      if (cur.previousHash !== prev.hash) return { valid: false, block: i, reason: 'Chain link broken' };
+    }
+    return { valid: true };
+  }
+
+  generatePassportId() {
+    this.passportCounter++;
+    return 'PP-' + String(this.passportCounter).padStart(6, '0');
+  }
+}
+
+// ═══════════════════════════════════════════════════
+// APP STATE
+// ═══════════════════════════════════════════════════
+
+const bc = new Blockchain();
+let currentPassportId = null;
+
+const COUNTRY_FLAGS = {
+  IND: '🇮🇳', USA: '🇺🇸', GBR: '🇬🇧', DEU: '🇩🇪',
+  JPN: '🇯🇵', AUS: '🇦🇺', CAN: '🇨🇦', FRA: '🇫🇷',
+  BRA: '🇧🇷', ZAF: '🇿🇦', SGP: '🇸🇬', UAE: '🇦🇪'
+};
+
+// ═══════════════════════════════════════════════════
+// UI NAVIGATION
+// ═══════════════════════════════════════════════════
+
+function showPanel(name) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('panel-' + name).classList.add('active');
+  event.currentTarget.classList.add('active');
+  if (name === 'passports') renderPassports();
+  if (name === 'chain') renderChainExplorer();
+  if (name === 'audit') renderAuditLog();
+  if (name === 'dashboard') renderDashboard();
+}
+
+function switchTab(el, tabId) {
+  el.closest('.modal').querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  el.closest('.modal').querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById(tabId).classList.add('active');
+}
+
+// ═══════════════════════════════════════════════════
+// PASSPORT ISSUE
+// ═══════════════════════════════════════════════════
+
+async function issuePassport() {
+  const fname = document.getElementById('fname').value.trim();
+  const lname = document.getElementById('lname').value.trim();
+  const dob = document.getElementById('dob').value;
+  const gender = document.getElementById('gender').value;
+  const nat = document.getElementById('nationality').value;
+  const pob = document.getElementById('pob').value.trim();
+  const issueDate = document.getElementById('issue-date').value;
+  const expiryDate = document.getElementById('expiry-date').value;
+  const authority = document.getElementById('authority').value.trim();
+  const ptype = document.getElementById('ptype').value;
+  const notes = document.getElementById('notes').value.trim();
+
+  if (!fname || !lname || !dob || !nat || !issueDate || !expiryDate) {
+    showAlert('issue-alert', 'error', '⚠ Please fill all required fields.');
+    return;
+  }
+
+  if (new Date(expiryDate) <= new Date(issueDate)) {
+    showAlert('issue-alert', 'error', '⚠ Expiry date must be after issue date.');
+    return;
+  }
+
+  const passportId = bc.generatePassportId();
+  const issuedAt = new Date().toISOString();
+
+  // Create biometric hash
+  const bioString = `${fname}|${lname}|${dob}|${nat}|${passportId}`;
+  const bioHash = await sha256(bioString);
+
+  const passportData = {
+    type: 'PASSPORT_ISSUE',
+    passportId,
+    holder: { firstName: fname, lastName: lname, dateOfBirth: dob, gender, placeOfBirth: pob },
+    document: { nationality: nat, type: ptype, issueDate, expiryDate, issuingAuthority: authority, notes },
+    meta: { issuedAt, biometricHash: '0x' + bioHash.substring(0, 40) },
+    status: 'ACTIVE'
+  };
+
+  showAlert('issue-alert', 'info', '⛏ Mining block... Please wait.');
+
+  const block = await bc.addBlock(passportData);
+  bc.passports[passportId] = { ...passportData, blockIndex: block.index, blockHash: block.hash };
+
+  bc.auditLog.push({
+    time: issuedAt,
+    type: 'issue',
+    icon: '✦',
+    msg: `Issued ${passportId} to ${fname} ${lname} (${nat})`,
+    passportId, blockIndex: block.index, hash: block.hash
+  });
+
+  showAlert('issue-alert', 'success', `✓ Passport ${passportId} issued! Block #${block.index} — Hash: ${block.hash.substring(0, 20)}...`);
+  clearIssueForm();
+  updateUI();
+}
+
+function clearIssueForm() {
+  ['fname','lname','dob','pob','notes'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('authority').value = 'Ministry of External Affairs';
+}
+
+function prefillDemo() {
+  const demos = [
+    { fname:'Priya', lname:'Nair', dob:'1992-07-14', gender:'F', nat:'IND', pob:'Kochi', auth:'Passport Seva Kendra' },
+    { fname:'James', lname:'Whitfield', dob:'1985-03-22', gender:'M', nat:'GBR', pob:'London', auth:'HM Passport Office' },
+    { fname:'Yuki', lname:'Tanaka', dob:'1998-11-05', gender:'F', nat:'JPN', pob:'Tokyo', auth:'Ministry of Foreign Affairs' },
+    { fname:'Carlos', lname:'Mendez', dob:'1979-09-30', gender:'M', nat:'BRA', pob:'São Paulo', auth:'Departamento de Polícia Federal' },
+  ];
+  const d = demos[Math.floor(Math.random() * demos.length)];
+  document.getElementById('fname').value = d.fname;
+  document.getElementById('lname').value = d.lname;
+  document.getElementById('dob').value = d.dob;
+  document.getElementById('gender').value = d.gender;
+  document.getElementById('nationality').value = d.nat;
+  document.getElementById('pob').value = d.pob;
+  document.getElementById('authority').value = d.auth;
+  const today = new Date();
+  document.getElementById('issue-date').value = today.toISOString().split('T')[0];
+  const expiry = new Date(today);
+  expiry.setFullYear(expiry.getFullYear() + 10);
+  document.getElementById('expiry-date').value = expiry.toISOString().split('T')[0];
+}
+
+// ═══════════════════════════════════════════════════
+// RENDER PASSPORTS
+// ═══════════════════════════════════════════════════
+
+function renderPassports() {
+  const grid = document.getElementById('passport-grid');
+  const query = (document.getElementById('search-input')?.value || '').toLowerCase();
+  const passports = Object.values(bc.passports);
+
+  const filtered = passports.filter(p =>
+    (p.holder.firstName + ' ' + p.holder.lastName + p.passportId + p.document.nationality).toLowerCase().includes(query)
+  );
+
+  if (filtered.length === 0) {
+    grid.innerHTML = `<div class="empty-state"><div class="empty-icon">🛂</div><div class="empty-text">No passports found.</div></div>`;
+    return;
+  }
+
+  grid.innerHTML = filtered.map(p => {
+    const flag = COUNTRY_FLAGS[p.document.nationality] || '🌍';
+    const statusClass = p.status === 'ACTIVE' ? 'status-active' : p.status === 'REVOKED' ? 'status-revoked' : 'status-expired';
+    const expiry = new Date(p.document.expiryDate);
+    const isExpired = expiry < new Date();
+    const status = p.status === 'REVOKED' ? 'REVOKED' : isExpired ? 'EXPIRED' : 'ACTIVE';
+    return `
+    <div class="passport-card" onclick="openPassportModal('${p.passportId}')">
+      <div class="card-header">
+        <span class="card-flag">${flag}</span>
+        <span class="card-type">TYPE ${p.document.type} — ${p.document.nationality}</span>
+      </div>
+      <div class="card-body">
+        <div class="card-name">${p.holder.firstName.toUpperCase()} ${p.holder.lastName.toUpperCase()}</div>
+        <div class="card-meta">
+          ID: ${p.passportId}<br>
+          DOB: ${p.holder.dateOfBirth} &nbsp;|&nbsp; ${p.holder.gender}<br>
+          Issued: ${p.document.issueDate} — Expiry: ${p.document.expiryDate}
+        </div>
+        <div class="card-hash">${p.blockHash.substring(0, 48)}...</div>
+        <div class="card-footer">
+          <span class="status-badge ${status === 'ACTIVE' ? 'status-active' : status === 'REVOKED' ? 'status-revoked' : 'status-expired'}">${status}</span>
+          <span style="font-family:var(--mono);font-size:0.65rem;color:var(--muted)">Block #${p.blockIndex}</span>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════════════════
+// MODAL
+// ═══════════════════════════════════════════════════
+
+function openPassportModal(id) {
+  const p = bc.passports[id];
+  if (!p) return;
+  currentPassportId = id;
+  const flag = COUNTRY_FLAGS[p.document.nationality] || '🌍';
+
+  document.getElementById('modal-title').innerHTML = `${flag} ${p.passportId} — ${p.holder.firstName} ${p.holder.lastName}`;
+
+  const expiry = new Date(p.document.expiryDate);
+  const isExpired = expiry < new Date();
+  const status = p.status === 'REVOKED' ? 'REVOKED' : isExpired ? 'EXPIRED' : 'ACTIVE';
+  const statusClass = status === 'ACTIVE' ? 'status-active' : status === 'REVOKED' ? 'status-revoked' : 'status-expired';
+
+  document.getElementById('tab-info').innerHTML = [
+    ['Passport ID', p.passportId],
+    ['Full Name', `${p.holder.firstName} ${p.holder.lastName}`],
+    ['Date of Birth', p.holder.dateOfBirth],
+    ['Gender', p.holder.gender === 'M' ? 'Male' : p.holder.gender === 'F' ? 'Female' : 'Non-binary / Other'],
+    ['Place of Birth', p.holder.placeOfBirth || '—'],
+    ['Nationality', p.document.nationality],
+    ['Passport Type', p.document.type],
+    ['Issue Date', p.document.issueDate],
+    ['Expiry Date', p.document.expiryDate],
+    ['Issuing Authority', p.document.issuingAuthority],
+    ['Status', `<span class="status-badge ${statusClass}">${status}</span>`],
+    ['Notes', p.document.notes || '—'],
+  ].map(([k, v]) => `<div class="detail-row"><div class="detail-label">${k}</div><div class="detail-value">${v}</div></div>`).join('');
+
+  // MRZ generation
+  const mrzPad = (s, n) => s.replace(/[^A-Z0-9]/g, '<').padEnd(n, '<').substring(0, n).toUpperCase();
+  const line1 = `P<${p.document.nationality}${mrzPad(p.holder.lastName + '<<' + p.holder.firstName, 39)}`;
+  const dobFmt = p.holder.dateOfBirth.replace(/-/g, '').substring(2);
+  const expFmt = p.document.expiryDate.replace(/-/g, '').substring(2);
+  const line2 = `${p.passportId.replace('-','')}${p.document.nationality}${dobFmt}${p.holder.gender}${expFmt}`;
+  document.getElementById('tab-mrz').innerHTML = `
+    <p style="font-size:0.8rem;color:var(--muted);margin-bottom:1rem">Machine Readable Zone — ICAO 9303 format</p>
+    <div class="mrz-field">${line1}<br>${mrzPad(line2, 44)}</div>
+    <div style="margin-top:1rem;font-size:0.75rem;color:var(--muted);font-family:var(--mono);line-height:2">
+      Line 1: Document type, nationality, name<br>
+      Line 2: Passport number, DOB, expiry, check digits
+    </div>`;
+
+  const blk = bc.chain[p.blockIndex];
+  document.getElementById('tab-chain').innerHTML = [
+    ['Block Index', '#' + p.blockIndex],
+    ['Block Hash', `<span style="color:var(--accent3);font-family:var(--mono);font-size:0.72rem;word-break:break-all">${p.blockHash}</span>`],
+    ['Previous Hash', `<span style="color:var(--muted);font-family:var(--mono);font-size:0.72rem;word-break:break-all">${blk?.previousHash || '—'}</span>`],
+    ['Timestamp', blk?.timestamp || '—'],
+    ['Nonce', blk?.nonce || '—'],
+    ['Biometric Hash', `<span style="color:var(--accent);font-family:var(--mono);font-size:0.72rem">${p.meta.biometricHash}</span>`],
+    ['Issued At', p.meta.issuedAt],
+  ].map(([k, v]) => `<div class="detail-row"><div class="detail-label">${k}</div><div class="detail-value">${v}</div></div>`).join('');
+
+  const actionsDiv = document.getElementById('modal-actions');
+  actionsDiv.innerHTML = p.status === 'ACTIVE' && !isExpired
+    ? `<button class="btn btn-danger btn-sm" onclick="quickRevoke('${p.passportId}')">🚫 Revoke</button>
+       <button class="btn btn-outline btn-sm" onclick="closeModal()">Close</button>`
+    : `<button class="btn btn-outline btn-sm" onclick="closeModal()">Close</button>`;
+
+  document.getElementById('modal-backdrop').classList.add('open');
+}
+
+function quickRevoke(id) {
+  document.getElementById('modal-backdrop').classList.remove('open');
+  document.getElementById('revoke-input').value = id;
+  document.querySelector('[onclick="showPanel(\'revoke\')"]').click();
+}
+
+function closeModal(e) {
+  if (!e || e.target === document.getElementById('modal-backdrop')) {
+    document.getElementById('modal-backdrop').classList.remove('open');
+  }
+}
+
+// ═══════════════════════════════════════════════════
+// VERIFY
+// ═══════════════════════════════════════════════════
+
+async function verifyPassport() {
+  const query = document.getElementById('verify-input').value.trim();
+  const res = document.getElementById('verify-result');
+  res.className = 'verify-result';
+
+  if (!query) { showAlert('', '', ''); return; }
+
+  let passport = bc.passports[query];
+  if (!passport) {
+    passport = Object.values(bc.passports).find(p => p.blockHash === query || p.blockHash.startsWith(query));
+  }
+
+  if (!passport) {
+    res.className = 'verify-result invalid';
+    res.textContent = `✗ NOT FOUND\n\nNo passport record found for: "${query}"\nThis ID does not exist on the chain.`;
+    return;
+  }
+
+  const blk = bc.chain[passport.blockIndex];
+  const recomputed = await blk.computeHash();
+  const hashValid = recomputed === blk.hash;
+  const prevValid = passport.blockIndex === 0 || blk.previousHash === bc.chain[passport.blockIndex - 1].hash;
+
+  const expiry = new Date(passport.document.expiryDate);
+  const isExpired = expiry < new Date();
+  const status = passport.status === 'REVOKED' ? 'REVOKED' : isExpired ? 'EXPIRED' : 'ACTIVE';
+
+  const overallValid = hashValid && prevValid && passport.status !== 'REVOKED' && !isExpired;
+
+  res.className = 'verify-result ' + (overallValid ? 'valid' : 'invalid');
+  res.textContent = `${overallValid ? '✓ VALID PASSPORT' : '✗ INVALID / NOT VALID'}
+
+Passport ID    : ${passport.passportId}
+Holder         : ${passport.holder.firstName} ${passport.holder.lastName}
+Nationality    : ${passport.document.nationality}
+Date of Birth  : ${passport.holder.dateOfBirth}
+Status         : ${status}
+Expiry         : ${passport.document.expiryDate} ${isExpired ? '(EXPIRED)' : ''}
+
+Chain Checks:
+  Block Index  : #${passport.blockIndex}
+  Hash Valid   : ${hashValid ? '✓' : '✗'} ${blk.hash.substring(0, 20)}...
+  Chain Link   : ${prevValid ? '✓ Linked to previous block' : '✗ Chain broken!'}
+  Not Revoked  : ${passport.status !== 'REVOKED' ? '✓' : '✗ REVOKED'}
+  Not Expired  : ${!isExpired ? '✓' : '✗ EXPIRED'}`;
+
+  bc.auditLog.push({
+    time: new Date().toISOString(), type: 'verify', icon: '🔍',
+    msg: `Verified ${passport.passportId} — Result: ${overallValid ? 'VALID' : 'INVALID'}`,
+    passportId: passport.passportId
+  });
+  updateUI();
+}
+
+// ═══════════════════════════════════════════════════
+// REVOKE
+// ═══════════════════════════════════════════════════
+
+async function revokePassport() {
+  const id = document.getElementById('revoke-input').value.trim().toUpperCase();
+  const reason = document.getElementById('revoke-reason').value;
+
+  if (!id) { showAlert('revoke-alert', 'error', '⚠ Enter a passport ID.'); return; }
+
+  const passport = bc.passports[id];
+  if (!passport) { showAlert('revoke-alert', 'error', `⚠ Passport ${id} not found.`); return; }
+  if (passport.status === 'REVOKED') { showAlert('revoke-alert', 'error', `⚠ Passport ${id} is already revoked.`); return; }
+
+  showAlert('revoke-alert', 'info', '⛏ Writing revocation to chain...');
+
+  const revokeData = {
+    type: 'PASSPORT_REVOKE',
+    passportId: id,
+    reason, revokedAt: new Date().toISOString(),
+    revokedBy: 'Central Authority'
+  };
+
+  const block = await bc.addBlock(revokeData);
+  bc.passports[id].status = 'REVOKED';
+  bc.passports[id].revokedReason = reason;
+  bc.passports[id].revokeBlock = block.index;
+
+  bc.auditLog.push({
+    time: new Date().toISOString(), type: 'revoke', icon: '🚫',
+    msg: `Revoked ${id} — Reason: ${reason}`, passportId: id, blockIndex: block.index
+  });
+
+  showAlert('revoke-alert', 'success', `✓ Passport ${id} revoked. Recorded in Block #${block.index}.`);
+  document.getElementById('revoke-input').value = '';
+  updateUI();
+}
+
+// ═══════════════════════════════════════════════════
+// TRANSFER
+// ═══════════════════════════════════════════════════
+
+async function transferRecord() {
+  const id = document.getElementById('transfer-id').value.trim().toUpperCase();
+  const dest = document.getElementById('transfer-dest').value;
+  const memo = document.getElementById('transfer-memo').value.trim();
+
+  if (!id) { showAlert('transfer-alert', 'error', '⚠ Enter a passport ID.'); return; }
+  if (!bc.passports[id]) { showAlert('transfer-alert', 'error', `⚠ Passport ${id} not found.`); return; }
+
+  showAlert('transfer-alert', 'info', '⛏ Committing transfer to chain...');
+
+  const txData = {
+    type: 'RECORD_TRANSFER',
+    passportId: id,
+    destination: dest,
+    memo: memo || 'No memo',
+    transferredAt: new Date().toISOString(),
+    from: bc.passports[id].document.issuingAuthority
+  };
+
+  const block = await bc.addBlock(txData);
+
+  bc.auditLog.push({
+    time: new Date().toISOString(), type: 'transfer', icon: '🔁',
+    msg: `Transferred ${id} to ${dest}`, passportId: id, blockIndex: block.index
+  });
+
+  showAlert('transfer-alert', 'success', `✓ Record transferred to ${dest}. Block #${block.index}`);
+  document.getElementById('transfer-id').value = '';
+  document.getElementById('transfer-memo').value = '';
+  updateUI();
+}
+
+// ═══════════════════════════════════════════════════
+// CHAIN EXPLORER
+// ═══════════════════════════════════════════════════
+
+function renderChainExplorer() {
+  const el = document.getElementById('chain-explorer');
+  el.innerHTML = bc.chain.map(blk => {
+    const typeLabel = blk.data.type || 'GENESIS';
+    const summary = blk.data.type === 'PASSPORT_ISSUE'
+      ? `Issue: ${blk.data.holder?.firstName} ${blk.data.holder?.lastName} (${blk.data.passportId})`
+      : blk.data.type === 'PASSPORT_REVOKE'
+        ? `Revoke: ${blk.data.passportId}`
+        : blk.data.type === 'RECORD_TRANSFER'
+          ? `Transfer: ${blk.data.passportId} → ${blk.data.destination}`
+          : blk.data.message || 'GENESIS';
+    return `
+    <div class="block ${blk.index === 0 ? 'genesis-block' : ''}">
+      <div class="block-index">BLOCK #${blk.index} &nbsp;·&nbsp; ${typeLabel} &nbsp;·&nbsp; NONCE: ${blk.nonce}</div>
+      <div class="block-data">${summary}</div>
+      <div class="block-hash">
+        HASH: <span>${blk.hash}</span><br>
+        PREV: ${blk.previousHash.substring(0, 32)}...
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function validateChain() {
+  const result = await bc.isChainValid();
+  const bar = document.getElementById('chain-valid-bar');
+  const msg = document.getElementById('chain-valid-msg');
+  if (result.valid) {
+    bar.style.background = 'rgba(0,255,136,0.06)';
+    bar.style.borderColor = 'rgba(0,255,136,0.2)';
+    bar.style.color = 'var(--accent3)';
+    msg.textContent = `Chain VALID — All ${bc.chain.length} blocks verified`;
+  } else {
+    bar.style.background = 'rgba(255,69,96,0.06)';
+    bar.style.borderColor = 'rgba(255,69,96,0.2)';
+    bar.style.color = 'var(--danger)';
+    msg.textContent = `Chain INVALID — Block #${result.block}: ${result.reason}`;
+  }
+}
+
+// ═══════════════════════════════════════════════════
+// AUDIT LOG
+// ═══════════════════════════════════════════════════
+
+function renderAuditLog() {
+  const el = document.getElementById('audit-log');
+  if (bc.auditLog.length === 0) {
+    el.innerHTML = '<div class="empty-state"><div class="empty-icon">📋</div><div class="empty-text">No activity yet.</div></div>';
+    return;
+  }
+  el.innerHTML = [...bc.auditLog].reverse().map(e =>
+    `<div class="log-entry">
+      <div class="log-time">${new Date(e.time).toLocaleTimeString()}</div>
+      <div class="log-icon">${e.icon}</div>
+      <div class="log-msg">${e.msg}</div>
+      <span class="log-type ${e.type}">${e.type.toUpperCase()}</span>
+    </div>`
+  ).join('');
+}
+
+function exportAudit() {
+  const data = JSON.stringify(bc.auditLog, null, 2);
+  const blob = new Blob([data], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'chainpass-audit.json';
+  a.click();
+}
+
+// ═══════════════════════════════════════════════════
+// SIDEBAR CHAIN
+// ═══════════════════════════════════════════════════
+
+function renderSidebarChain() {
+  const el = document.getElementById('chain-sidebar');
+  const blocks = bc.chain.slice().reverse().slice(0, 8);
+  el.innerHTML = blocks.map(blk => {
+    const label = blk.data.type === 'PASSPORT_ISSUE'
+      ? `Issue: ${blk.data.passportId}`
+      : blk.data.type === 'PASSPORT_REVOKE'
+        ? `Revoke: ${blk.data.passportId}`
+        : blk.data.type === 'RECORD_TRANSFER'
+          ? `TX: ${blk.data.passportId}`
+          : 'Genesis Block';
+    return `
+    <div class="block ${blk.index === 0 ? 'genesis-block' : ''}">
+      <div class="block-index">BLOCK #${blk.index}</div>
+      <div class="block-data">${label}</div>
+      <div class="block-hash">
+        <span>${blk.hash.substring(0, 32)}</span>...
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════════════════
+// DASHBOARD
+// ═══════════════════════════════════════════════════
+
+function renderDashboard() {
+  const recent = document.getElementById('recent-log');
+  const last5 = [...bc.auditLog].reverse().slice(0, 5);
+  if (last5.length === 0) {
+    recent.innerHTML = '<div style="color:var(--muted);font-size:0.85rem">No activity yet. Issue a passport to get started.</div>';
+    return;
+  }
+  recent.innerHTML = last5.map(e =>
+    `<div class="log-entry">
+      <div class="log-time">${new Date(e.time).toLocaleTimeString()}</div>
+      <div class="log-icon">${e.icon}</div>
+      <div class="log-msg">${e.msg}</div>
+      <span class="log-type ${e.type}">${e.type.toUpperCase()}</span>
+    </div>`
+  ).join('');
+}
+
+// ═══════════════════════════════════════════════════
+// UTILS
+// ═══════════════════════════════════════════════════
+
+function showAlert(id, type, msg) {
+  if (!id) return;
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.className = `alert alert-${type} show`;
+  el.textContent = msg;
+  if (type !== 'info') setTimeout(() => el.classList.remove('show'), 5000);
+}
+
+function updateUI() {
+  const passports = Object.values(bc.passports);
+  const active = passports.filter(p => p.status === 'ACTIVE').length;
+  const revoked = passports.filter(p => p.status === 'REVOKED').length;
+
+  document.getElementById('stat-total').textContent = passports.length;
+  document.getElementById('stat-active').textContent = active;
+  document.getElementById('stat-revoked').textContent = revoked;
+  document.getElementById('stat-blocks').textContent = bc.chain.length;
+
+  document.getElementById('hdr-blocks').textContent = bc.chain.length;
+  document.getElementById('hdr-passports').textContent = passports.length;
+
+  renderSidebarChain();
+  renderDashboard();
+}
+
+// ═══════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════
+
+bc.init().then(() => {
+  updateUI();
+  // Set default dates
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('issue-date').value = today;
+  const expiry = new Date();
+  expiry.setFullYear(expiry.getFullYear() + 10);
+  document.getElementById('expiry-date').value = expiry.toISOString().split('T')[0];
+});
+</script>
+</body>
+</html>
